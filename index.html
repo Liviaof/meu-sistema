@@ -6,11 +6,19 @@
     <title>Sistema de Vendas e Estoque Pro</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @media print {
+            body * { visibility: hidden; }
+            #areaImpressaoRecibo, #areaImpressaoRecibo * { visibility: visible; }
+            #areaImpressaoRecibo { position: absolute; left: 0; top: 0; width: 100%; }
+            .no-print { display: none !important; }
+        }
+    </style>
 </head>
 <body class="bg-gray-100 font-sans text-gray-800 flex h-screen overflow-hidden">
 
     <!-- Menu Lateral -->
-    <aside class="w-64 bg-slate-900 text-white flex flex-col justify-between shrink-0">
+    <aside class="w-64 bg-slate-900 text-white flex flex-col justify-between shrink-0 no-print">
         <div>
             <div class="p-4 border-b border-slate-800 flex items-center space-x-3">
                 <div id="logoContainer" class="w-10 h-10 rounded-lg bg-indigo-600 flex items-center justify-center overflow-hidden shrink-0">
@@ -46,7 +54,7 @@
     </aside>
 
     <!-- Conteúdo Principal -->
-    <main class="flex-1 overflow-y-auto p-8" id="conteudoMain">
+    <main class="flex-1 overflow-y-auto p-8 no-print" id="conteudoMain">
 
         <!-- ABA: PDV / NOVA VENDA -->
         <section id="aba-pdv" class="space-y-6">
@@ -67,7 +75,6 @@
                         </select>
                     </div>
 
-                    <!-- Display com Foto e Detalhes do Produto Selecionado -->
                     <div id="infoProdutoContainer" class="hidden p-3 bg-indigo-50 border border-indigo-100 rounded-lg flex items-center space-x-3">
                         <div class="w-16 h-16 bg-white border rounded-lg overflow-hidden shrink-0 flex items-center justify-center text-gray-400">
                             <img id="pdvFotoProd" class="w-full h-full object-cover hidden" alt="Foto">
@@ -183,7 +190,7 @@
                         <tr>
                             <th class="p-3">Nome</th>
                             <th class="p-3">WhatsApp</th>
-                            <th class="p-3 font-right text-right">Ações</th>
+                            <th class="p-3 text-right">Ações</th>
                         </tr>
                     </thead>
                     <tbody id="tabelaClientes" class="divide-y"></tbody>
@@ -268,7 +275,7 @@
     </main>
 
     <!-- MODAL CADASTRO DE PRODUTO -->
-    <div id="modalProdContainer" class="fixed inset-0 bg-black/50 hidden flex items-center justify-center p-4 z-50">
+    <div id="modalProdContainer" class="fixed inset-0 bg-black/50 hidden flex items-center justify-center p-4 z-50 no-print">
         <div class="bg-white rounded-xl shadow-xl w-full max-w-md p-6 space-y-4">
             <h3 class="text-lg font-bold text-gray-900">Cadastrar Novo Produto</h3>
             
@@ -316,6 +323,56 @@
         </div>
     </div>
 
+    <!-- MODAL DE RECIBO / COMPROVANTE DE VENDA -->
+    <div id="modalReciboContainer" class="fixed inset-0 bg-black/50 hidden flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-sm p-6 space-y-4">
+            <!-- Conteúdo Impresso do Recibo -->
+            <div id="areaImpressaoRecibo" class="p-2 space-y-3 font-mono text-xs text-black">
+                <div class="text-center border-b pb-2 space-y-1">
+                    <h2 class="font-bold text-sm uppercase" id="recEmpresa">NOME DA EMPRESA</h2>
+                    <p id="recCnpjTel">CNPJ: 00.000.000/0001-00</p>
+                    <p class="font-bold mt-1">COMPROVANTE DE VENDA</p>
+                </div>
+
+                <div class="space-y-0.5 border-b pb-2">
+                    <p><strong>Venda:</strong> #<span id="recId">0</span></p>
+                    <p><strong>Data:</strong> <span id="recData">00/00/0000</span></p>
+                    <p><strong>Cliente:</strong> <span id="recCliente">Consumidor</span></p>
+                </div>
+
+                <div>
+                    <p class="font-bold border-b pb-1">ITENS DO PEDIDO:</p>
+                    <div id="recListaItens" class="py-2 space-y-1"></div>
+                </div>
+
+                <div class="border-t pt-2 space-y-1">
+                    <p class="flex justify-between text-sm font-bold">
+                        <span>TOTAL:</span>
+                        <span id="recTotal">R$ 0,00</span>
+                    </p>
+                    <p><strong>Forma Pagto:</strong> <span id="recPagamento">PIX</span></p>
+                </div>
+
+                <div class="text-center pt-3 border-t text-[10px]">
+                    <p>Obrigado pela preferência!</p>
+                </div>
+            </div>
+
+            <!-- Botões de Ação -->
+            <div class="flex flex-col gap-2 no-print pt-2">
+                <button onclick="enviarReciboWhatsAppAtual()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-2 rounded-lg text-xs flex items-center justify-center gap-1.5">
+                    📱 Enviar por WhatsApp
+                </button>
+                <button onclick="window.print()" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-medium py-2 rounded-lg text-xs flex items-center justify-center gap-1.5">
+                    🖨️ Imprimir / Salvar PDF
+                </button>
+                <button onclick="fecharModalRecibo()" class="w-full bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium py-2 rounded-lg text-xs">
+                    Fechar
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- LÓGICA DO SISTEMA EM JAVASCRIPT -->
     <script>
         // --- BANCO DE DADOS LOCAL ---
@@ -328,6 +385,7 @@
 
         let carrinho = [];
         let formaPagamentoSel = 'PIX';
+        let vendaAtualRecibo = null;
 
         function salvarDB() {
             localStorage.setItem('db_config', JSON.stringify(DB.config));
@@ -498,7 +556,7 @@
             });
 
             const total = carrinho.reduce((acc, i) => acc + i.total, 0);
-            const resumoItens = carrinho.map(i => `${i.nome} (${i.qtd} ${i.unidade})`).join('; ');
+            const resumoItens = carrinho.map(i => `${i.nome} (${i.qtd} ${i.unidade}) - R$ ${i.total.toFixed(2)}`).join('; ');
 
             const novaVenda = {
                 id: DB.vendas.length + 1,
@@ -513,8 +571,55 @@
             DB.vendas.push(novaVenda);
             salvarDB();
             limparCarrinho();
-            alert(`Venda #${novaVenda.id} realizada com sucesso!`);
             renderizarTudo();
+            
+            // Abre automaticamente o recibo
+            abrirRecibo(novaVenda.id);
+        }
+
+        // --- MÓDULO DE RECIBO DE VENDA ---
+        function abrirRecibo(idVenda) {
+            const venda = DB.vendas.find(v => v.id === idVenda);
+            if (!venda) return;
+
+            vendaAtualRecibo = venda;
+
+            document.getElementById('recEmpresa').innerText = DB.config.nomeLoja;
+            document.getElementById('recCnpjTel').innerText = `CNPJ: ${DB.config.cnpj || 'Não informado'} • Tel: ${DB.config.tel || 'Não informado'}`;
+            document.getElementById('recId').innerText = venda.id;
+            document.getElementById('recData').innerText = venda.data;
+            document.getElementById('recCliente').innerText = venda.cliente;
+            document.getElementById('recTotal').innerText = `R$ ${venda.total.toFixed(2)}`;
+            document.getElementById('recPagamento').innerText = venda.pagamento;
+
+            const listaContainer = document.getElementById('recListaItens');
+            const itensArr = venda.itens.split(';');
+            listaContainer.innerHTML = itensArr.map(i => `<div class="flex justify-between"><span>${i.trim()}</span></div>`).join('');
+
+            document.getElementById('modalReciboContainer').classList.remove('hidden');
+        }
+
+        function fecharModalRecibo() {
+            document.getElementById('modalReciboContainer').classList.add('hidden');
+        }
+
+        function enviarReciboWhatsAppAtual() {
+            if (!vendaAtualRecibo) return;
+            
+            const cli = DB.clientes.find(c => c.nome === vendaAtualRecibo.cliente);
+            let numTel = cli && cli.tel ? cli.tel.replace(/\D/g, '') : '';
+
+            const msg = `*COMPROVANTE DE COMPRA - ${DB.config.nomeLoja}*\n\n` +
+                `*Venda:* #${vendaAtualRecibo.id}\n` +
+                `*Data:* ${vendaAtualRecibo.data}\n` +
+                `*Cliente:* ${vendaAtualRecibo.cliente}\n\n` +
+                `*Itens:*\n${vendaAtualRecibo.itens.split(';').map(i => '• ' + i.trim()).join('\n')}\n\n` +
+                `*TOTAL:* R$ ${vendaAtualRecibo.total.toFixed(2)}\n` +
+                `*Pagamento:* ${vendaAtualRecibo.pagamento}\n\n` +
+                `Obrigado pela preferência!`;
+
+            const url = `https://wa.me/${numTel}?text=${encodeURIComponent(msg)}`;
+            window.open(url, '_blank');
         }
 
         // --- MÓDULO PRODUTOS ---
@@ -615,7 +720,7 @@
         function modalCliente() {
             const nome = prompt("Nome do cliente:");
             if(!nome) return;
-            const tel = prompt("WhatsApp / Telefone:");
+            const tel = prompt("WhatsApp / Telefone com DDD (ex: 11999998888):");
 
             DB.clientes.push({ id: Date.now(), nome, tel });
             salvarDB();
@@ -655,8 +760,9 @@
                             ${v.status}
                         </span>
                     </td>
-                    <td class="p-3 text-right">
-                        ${v.status === 'CONCLUÍDA' ? `<button onclick="estornarVenda(${v.id})" class="text-red-600 hover:underline text-xs">Estornar</button>` : '-'}
+                    <td class="p-3 text-right space-x-2">
+                        <button onclick="abrirRecibo(${v.id})" class="text-indigo-600 hover:underline text-xs">Recibo</button>
+                        ${v.status === 'CONCLUÍDA' ? `<button onclick="estornarVenda(${v.id})" class="text-red-600 hover:underline text-xs">Estornar</button>` : ''}
                     </td>
                 </tr>
             `).join('');
